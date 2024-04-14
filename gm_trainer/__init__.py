@@ -9,23 +9,6 @@ MODEL = llm.get_model("claude-3-opus")
 MODEL.key = api_key
 
 
-def andlist(alist: list, separator: str = ", ") -> str:
-    """Format a list for human-facing display, with the last item set off by 'and'.
-    >>> andlist([1, 2, 3], ', ')
-    '1, 2 and 3'
-    """
-    if not alist:
-        raise ValueError("argument list must have at least one item")
-    elif len(alist) == 1:
-        return alist[0]
-    elif len(alist) == 2:
-        return f"{alist[0]} and {alist[1]}"
-    else:
-        initials = separator.join([str(x) for x in alist[:-1]])
-        final = f" and {alist[-1]}"
-        return initials + final
-
-
 @dataclass
 class Player:
     name: str
