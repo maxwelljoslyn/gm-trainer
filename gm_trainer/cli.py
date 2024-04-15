@@ -10,28 +10,46 @@ MODEL.key = api_key
 
 
 @dataclass
+class PlayerCharacter:
+    name: str
+    character_class: str
+    level: int = 1
+    spells: list[str] | None = None
+
+    def display_details(self):
+        result = [f"{self.name}", f"Level {self.level} {self.character_class}"]
+        if self.spells:
+            spell_display = ", ".join(self.spells)
+            result.append("".join(["Spells:", spell_display]))
+        return "\n".join(result)
+
+
+@dataclass
 class Player:
     name: str
-    pc_name: str
-    pc_level: int
-    pc_class: str
+    pc: PlayerCharacter
 
     def __post_init__(self):
         """Set up the LLM conversation."""
         self.conversation = MODEL.conversation()
 
-    def format_pc(self):
-        return f"{self.pc_name}, a level {self.pc_level} {self.pc_class}"
-
     def format_response(self, response):
-        return f"{self.pc_name}: {response.text()}"
+        return f"{self.pc.name}: {response.text()}"
 
 
-players = [Player("Alice", "Arvak", 2, "fighter"), Player("Bob", "Bolzar", 3, "mage")]
+arvak = PlayerCharacter("Arvak", "fighter", 2)
+bolzar = PlayerCharacter(
+    "Bolzar", "mage", 3, ["Witchbolt", "Protective Aura", "Levitate", "Sleep"]
+)
+alice = Player("Alice", arvak)
+bob = Player("Bob", bolzar)
+players = [alice, bob]
 
 
 def other_players_prompt(other_players):
-    return "\n".join([f"{p.name}, playing {p.format_pc()}" for p in other_players])
+    return "\n".join(
+        [f"{p.name}, playing {p.pc.display_details()}" for p in other_players]
+    )
 
 
 def system_prompt(p: Player):
@@ -39,8 +57,7 @@ def system_prompt(p: Player):
     return dedent(
         f"""
     You are {p.name}, a player participating in a roleplaying game
-    session. Your character is {p.pc_name}, a level {p.pc_level}
-    {p.pc_class}. Your fellow players include:
+    session. Your character is {p.pc.display_details()}. Your fellow players include:
     {other_players_prompt(other_players)}
 
     The user is the Game Master (GM) of the session. The GM will
