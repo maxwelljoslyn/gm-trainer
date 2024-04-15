@@ -62,7 +62,6 @@ class GameSession:
     narration: str
     call_to_action: str = "What do you do?"
     id: str = str(ULID()).lower()
-    # TODO learn to use field here; I cargo-culted field(default_factory=lambda: players) but that seems wrong
 
     def __post_init__(self):
         self.actions_this_round: list[str] = list()
@@ -109,7 +108,6 @@ class GameSession:
                     )
                     sleep(backoff)
                     backoff *= 2
-            # TODO need to include the session id, etc. here
             response.log_to_db(self.db)
             self.actions_this_round.append(player.format_response(response))
             print(player.format_response(response))
