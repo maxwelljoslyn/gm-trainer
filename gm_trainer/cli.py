@@ -141,10 +141,17 @@ class GameSession:
         with your fellow players, acting as a team through your characters
         to accomplish shared goals.
 
-        Respond with roughly one declarative sentence or one question
-        per prompt. No yapping. Do not describe more than one action,
-        or give more than one question. Do not describe any game
-        scenario elements, nor the actions of other characters."""
+        Further instructions:
+        DO respond with a declarative sentence describing each action you take.
+        DO respond with questions for the GM, especially if you aren't sure what skills, items, or knowledge you possess.
+        DO respond with questions or comments for your fellow players.
+
+        DO NOT yap. No yapping.
+        DO NOT give more than one action declaration, or question, or comment, at a time.
+        DO NOT assume that you possess any skills, items, or knowledge unless the GM says so.
+        DO NOT attempt to describe any game scenario elements.
+        DO NOT attempt to describe the actions of other characters.
+        DO NOT speak in stage directions surrounded by asterisks, *like this*."""
         ).strip()
 
     def game_loop(self):
