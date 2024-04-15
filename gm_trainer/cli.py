@@ -89,7 +89,6 @@ class GameSession:
             self.gm_turn()
         for player in players:
             prompt = self.make_player_prompt(player)
-            print("DEBUG", prompt)
             response = player.conversation.prompt(
                 prompt, system=self.system_prompt(player)
             )
