@@ -1,4 +1,6 @@
 import llm
+import click
+import sqlite_utils
 from textwrap import dedent
 import os
 
@@ -78,20 +80,21 @@ def scenario_prompt(text):
     return f"GM: {text}\n\nWhat do you do?"
 
 
-def player_turn(scenario, initial=False):
+def player_turn(scenario, database, initial=False):
     if initial:
         print(scenario_prompt(scenario))
     for player in players:
         response = player.conversation.prompt(
             scenario_prompt(scenario), system=system_prompt(player)
         )
+        response.log_to_db(database)
         scenario = f"{scenario}\n{player.format_response(response)}"
         print(player.format_response(response))
     return scenario
 
 
 initial_scenario = dedent(
-    f"""
+    """
 The year is 1651. You and your companions woke up dawn and traveled
 into the foothills of the mountains of Tenerife, the most important of
 the Canary Islands. Now you stand before a cave whose opening is as
@@ -102,13 +105,33 @@ this."""
 ).strip()
 
 
-def game_loop(current_scenario):
-    current_scenario = player_turn(current_scenario, initial=True)
+def game_loop(scenario, database):
+    scenario = player_turn(scenario, database, initial=True)
     while True:
         what_happens = input("GM: ")
-        # get all N players' most recent response to append...
-        current_scenario = player_turn(what_happens)
+        scenario = player_turn(what_happens, database)
 
 
-def cli():
-    game_loop(initial_scenario)
+CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+
+
+@click.group(context_settings=CONTEXT_SETTINGS)
+@click.version_option()
+@click.pass_context
+def cli(ctx):
+    """Entry point to GM Trainer's CLI. This is a Click group, under which are the subcommands that do the real work."""
+    # ensure that ctx.obj exists and is a dict,
+    # in case `buddy()` called outside __main__
+    ctx.ensure_object(dict)
+
+
+@click.option(
+    "-d",
+    "--database-path",
+    help="Path to database for storing session logs",
+    default="logs.db",
+)
+@cli.command
+def start(database_path):
+    db = sqlite_utils.Database("logs.db")
+    game_loop(initial_scenario, db)

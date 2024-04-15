@@ -10,6 +10,7 @@ python = "^3.11"
 click = "^8.1.7"
 llm = "^0.13.1"
 llm-claude-3 = "^0.3"
+sqlite-utils = "^3.36"
 
 
 [tool.poetry.group.dev.dependencies]
