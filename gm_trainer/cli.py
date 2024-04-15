@@ -1,10 +1,12 @@
-import llm
-import click
-import sqlite_utils
+from dataclasses import dataclass, field
+from copy import deepcopy
 from textwrap import dedent
 import os
 
-from dataclasses import dataclass
+import llm
+import click
+import sqlite_utils
+from ulid import ULID
 
 api_key = os.getenv("GM_TRAINER_OPUS_API_KEY")
 MODEL = llm.get_model("claude-3-opus")
@@ -48,68 +50,90 @@ bob = Player("Bob", bolzar)
 players = [alice, bob]
 
 
-def other_players_prompt(other_players):
-    return "\n".join(
-        [f"{p.name}, playing {p.pc.display_details()}" for p in other_players]
-    )
+@dataclass
+class GameSession:
+    db: sqlite_utils.Database
+    narration: str
+    call_to_action: str = "What do you do?"
+    id: str = str(ULID()).lower()
+    # TODO learn to use field here; I cargo-culted field(default_factory=lambda: players) but that seems wrong
 
+    def __post_init__(self):
+        self.actions_this_round: list[str] = list()
+        self.actions_previous_round: list[str] = list()
+        self.players = deepcopy(players)
 
-def system_prompt(p: Player):
-    other_players = [v for v in players if p.name != v.name]
-    return dedent(
-        f"""
-    You are {p.name}, a player participating in a roleplaying game
-    session. Your character is {p.pc.display_details()}. Your fellow players include:
-    {other_players_prompt(other_players)}
+    def make_gm_dialogue(self, text):
+        return f"GM: {text}\n{self.call_to_action}"
 
-    The user is the Game Master (GM) of the session. The GM will
-    describe a scenario to you, then ask you what you want to do. You
-    can declare an action for your character, or ask questions of the
-    GM until you're ready to declare an action. You must cooperate
-    with your fellow players, acting as a team through your characters
-    to accomplish shared goals.
+    def gm_turn(self):
+        print(self.make_gm_dialogue(self.narration))
 
-    Respond with one declarative sentence or one question per prompt.
-    No yapping. Do not describe more than one action, or give more
-    than one question. Do not describe any game scenario elements, nor
-    the actions of other characters."""
-    ).strip()
-
-
-def scenario_prompt(text):
-    return f"GM: {text}\n\nWhat do you do?"
-
-
-def player_turn(scenario, database, initial=False):
-    if initial:
-        print(scenario_prompt(scenario))
-    for player in players:
-        response = player.conversation.prompt(
-            scenario_prompt(scenario), system=system_prompt(player)
+    def make_player_prompt(self, p: Player):
+        # In the case that this is the first round and no player has
+        # taken her turn yet, this reduces to just giving the
+        # initially-provided narration.
+        return "\n".join(
+            [
+                *self.actions_previous_round,
+                self.make_gm_dialogue(self.narration),
+                *self.actions_this_round,
+            ]
         )
-        response.log_to_db(database)
-        scenario = f"{scenario}\n{player.format_response(response)}"
-        print(player.format_response(response))
-    return scenario
 
+    def run_turn(self):
+        is_first_turn_and_first_round = (
+            not self.actions_this_round and not self.actions_previous_round
+        )
+        if is_first_turn_and_first_round:
+            self.gm_turn()
+        for player in players:
+            prompt = self.make_player_prompt(player)
+            print("DEBUG", prompt)
+            response = player.conversation.prompt(
+                prompt, system=self.system_prompt(player)
+            )
+            # TODO need to include the session id, etc. here
+            response.log_to_db(self.db)
+            self.actions_this_round.append(player.format_response(response))
+            print(player.format_response(response))
+        gm_input = input("GM: ")
+        self.narration = gm_input
+        self.actions_previous_round = deepcopy(self.actions_this_round)
+        self.actions_this_round = []
 
-initial_scenario = dedent(
-    """
-The year is 1651. You and your companions woke up dawn and traveled
-into the foothills of the mountains of Tenerife, the most important of
-the Canary Islands. Now you stand before a cave whose opening is as
-tall as two men and as wide as a wagon. You've been told that before
-these islands were conquered by the Spanish, the indigenous Guanches
-(who still exist) would bury their mummified dead in caverns like
-this."""
-).strip()
+    def describe_other_players(self, p: Player):
+        return "\n".join(
+            [
+                f"{other.name}, playing {other.pc.display_details()}"
+                for other in self.players
+                if p.name != other.name
+            ]
+        )
 
+    def system_prompt(self, p: Player):
+        return dedent(
+            f"""
+        You are {p.name}, a player participating in a roleplaying game
+        session. Your character is {p.pc.display_details()}. Your fellow players are:
+        {self.describe_other_players(p)}
 
-def game_loop(scenario, database):
-    scenario = player_turn(scenario, database, initial=True)
-    while True:
-        what_happens = input("GM: ")
-        scenario = player_turn(what_happens, database)
+        The user is the Game Master (GM) of the session. The GM will
+        describe a scenario to you, then ask you what you want to do. You
+        can declare an action for your character, or ask questions of the
+        GM until you're ready to declare an action. You must cooperate
+        with your fellow players, acting as a team through your characters
+        to accomplish shared goals.
+
+        Respond with roughly one declarative sentence or one question
+        per prompt. No yapping. Do not describe more than one action,
+        or give more than one question. Do not describe any game
+        scenario elements, nor the actions of other characters."""
+        ).strip()
+
+    def game_loop(self):
+        while True:
+            self.run_turn()
 
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
@@ -133,5 +157,18 @@ def cli(ctx):
 )
 @cli.command
 def start(database_path):
-    db = sqlite_utils.Database("logs.db")
-    game_loop(initial_scenario, db)
+    session = GameSession(
+        sqlite_utils.Database(database_path),
+        dedent(
+            """
+            The year is 1651. You and your companions woke up dawn
+            and traveled into the foothills of the mountains of
+            Tenerife, the most important of the Canary Islands. Now
+            you stand before a cave whose opening is as tall as two
+            men and as wide as a wagon. You've been told that before
+            these islands were conquered by the Spanish, the
+            indigenous Guanches (who still exist) would bury their
+            mummified dead in caverns like this."""
+        ).strip(),
+    )
+    session.game_loop()
