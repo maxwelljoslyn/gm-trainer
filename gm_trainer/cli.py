@@ -1,12 +1,18 @@
 from dataclasses import dataclass, field
+from time import sleep
 from copy import deepcopy
 from textwrap import dedent
 import os
+import logging
+from pathlib import Path
 
 import llm
 import click
 import sqlite_utils
 from ulid import ULID
+
+logger = logging.getLogger(Path(__file__).name)
+logging.basicConfig(level=logging.DEBUG)
 
 api_key = os.getenv("GM_TRAINER_OPUS_API_KEY")
 MODEL = llm.get_model("claude-3-opus")
@@ -89,9 +95,20 @@ class GameSession:
             self.gm_turn()
         for player in players:
             prompt = self.make_player_prompt(player)
-            response = player.conversation.prompt(
-                prompt, system=self.system_prompt(player)
-            )
+            backoff = 2
+            while True:
+                try:
+                    response = player.conversation.prompt(
+                        prompt, system=self.system_prompt(player)
+                    )
+                    break
+                except Exception:
+                    # guard againt overloaded APIs, etc.
+                    logging.debug(
+                        f"API or other error with generating response. Waiting {backoff} seconds before trying again."
+                    )
+                    sleep(backoff)
+                    backoff *= 2
             # TODO need to include the session id, etc. here
             response.log_to_db(self.db)
             self.actions_this_round.append(player.format_response(response))
