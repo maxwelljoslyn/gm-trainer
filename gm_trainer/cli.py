@@ -13,7 +13,7 @@ import sqlite_utils
 from ulid import ULID
 
 logger = logging.getLogger(Path(__file__).name)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
 
 api_key = os.getenv("GM_TRAINER_OPUS_API_KEY")
 MODEL = llm.get_model("claude-3-opus")
