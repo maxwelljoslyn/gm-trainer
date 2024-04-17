@@ -12,6 +12,7 @@ llm = "^0.13.1"
 llm-claude-3 = "^0.3"
 sqlite-utils = "^3.36"
 python-ulid = "^2.4.0.post0"
+prompt-toolkit = "^3.0.43"
 
 
 [tool.poetry.group.dev.dependencies]

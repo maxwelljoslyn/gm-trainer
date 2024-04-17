@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import prompt_toolkit as pt
 from time import sleep
 from copy import deepcopy
 from textwrap import dedent
@@ -111,10 +112,10 @@ class GameSession:
             response.log_to_db(self.db)
             self.actions_this_round.append(player.format_response(response))
             print(player.format_response(response))
-        gm_input = input("GM: ")
         self.narration = gm_input
         self.actions_previous_round = deepcopy(self.actions_this_round)
         self.actions_this_round = []
+        gm_input = pt.prompt("GM: ")
 
     def describe_other_players(self, p: Player):
         return "\n".join(
