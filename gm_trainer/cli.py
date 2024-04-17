@@ -61,7 +61,6 @@ players = [alice, bob]
 class GameSession:
     db: sqlite_utils.Database
     narration: str
-    call_to_action: str = "What do you do?"
     id: str = str(ULID()).lower()
 
     def __post_init__(self):
@@ -69,11 +68,10 @@ class GameSession:
         self.actions_previous_round: list[str] = list()
         self.players = deepcopy(players)
 
-    def make_gm_dialogue(self, text):
-        return f"GM: {text}\n{self.call_to_action}"
-
-    def gm_turn(self):
-        print(self.make_gm_dialogue(self.narration))
+    def gm_dialogue(self, text=None):
+        if not text:
+            text = self.narration
+        return f"GM: {text}"
 
     def make_player_prompt(self, p: Player):
         # In the case that this is the first round and no player has
@@ -82,7 +80,7 @@ class GameSession:
         return "\n".join(
             [
                 *self.actions_previous_round,
-                self.make_gm_dialogue(self.narration),
+                self.gm_dialogue(),
                 *self.actions_this_round,
             ]
         )
@@ -92,7 +90,7 @@ class GameSession:
             not self.actions_this_round and not self.actions_previous_round
         )
         if is_first_turn_and_first_round:
-            self.gm_turn()
+            print(self.gm_dialogue())
         for player in players:
             prompt = self.make_player_prompt(player)
             backoff = 2
