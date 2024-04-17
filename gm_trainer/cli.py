@@ -85,7 +85,7 @@ class GameSession:
             ]
         )
 
-    def run_turn(self):
+    def run_turn(self, tries=3):
         is_first_turn_and_first_round = (
             not self.actions_this_round and not self.actions_previous_round
         )
@@ -94,7 +94,7 @@ class GameSession:
         for player in players:
             prompt = self.make_player_prompt(player)
             backoff = 2
-            while True:
+            while True and tries > 0:
                 try:
                     response = player.conversation.prompt(
                         prompt, system=self.system_prompt(player)
@@ -102,8 +102,13 @@ class GameSession:
                     break
                 except Exception:
                     # guard againt overloaded APIs, etc.
+                    tries -= 1
+                    if tries == 0:
+                        raise Exception(
+                            f"Ran out of tries while generating response for player {player}"
+                        )
                     logging.debug(
-                        f"API or other error with generating response. Waiting {backoff} seconds before trying again."
+                        f"API or other error with generating response. Waiting {backoff} seconds before trying again ({tries} tries left.)"
                     )
                     sleep(backoff)
                     backoff *= 2
