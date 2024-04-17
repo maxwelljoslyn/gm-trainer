@@ -115,10 +115,13 @@ class GameSession:
             response.log_to_db(self.db)
             self.actions_this_round.append(player.format_response(response))
             print(player.format_response(response))
-        self.narration = gm_input
-        self.actions_previous_round = deepcopy(self.actions_this_round)
-        self.actions_this_round = []
         gm_input = pt.prompt("GM: ")
+        # multiple assignment to indicate an "atomic" state update
+        self.narration, self.actions_previous_round, self.actions_this_round = (
+            gm_input,
+            deepcopy(self.actions_this_round),
+            [],
+        )
 
     def describe_other_players(self, p: Player):
         return "\n".join(
