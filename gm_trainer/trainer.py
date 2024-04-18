@@ -13,8 +13,9 @@ import prompt_toolkit as pt
 import sqlite_utils
 from ulid import ULID
 
-# NOTE Gradio sends telemetry and analytics:
-# INFO:httpx:HTTP Request: GET https://checkip.amazonaws.com/ "HTTP/1.1 200 "
+# NOTE Gradio sends telemetry and analytics by default.
+# Supposedly I've turned it off with the `analytics_enabled=False` argument to gr.Interface, but be wary.
+# It hit these URLs, among others:
 # INFO:httpx:HTTP Request: GET https://checkip.amazonaws.com/ "HTTP/1.1 200 "
 # INFO:httpx:HTTP Request: POST https://api.gradio.app/gradio-initiated-analytics/ "HTTP/1.1 200 OK"
 # INFO:httpx:HTTP Request: POST https://api.gradio.app/gradio-launched-telemetry/ "HTTP/1.1 200 OK"
