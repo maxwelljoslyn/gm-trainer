@@ -95,8 +95,8 @@ class WebUI:
             analytics_enabled=False,
         )
 
-    def launch(self):
         self.interface.launch()
+    def run(self):
 
     def accept_input(self, gm_input):
         self.session.narration = gm_input
@@ -198,34 +198,30 @@ class GameSession:
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
-@click.group(context_settings=CONTEXT_SETTINGS)
+@click.command(context_settings=CONTEXT_SETTINGS)
 @click.version_option()
-@click.pass_context
-def trainer(ctx):
-    """Entry point to GM Trainer. This is a Click group, under which are the subcommands that do the real work."""
-    # ensure that ctx.obj exists and is a dict,
-    # in case this fn is called outside __main__
-    ctx.ensure_object(dict)
-
-
 @click.option(
     "-d",
     "--database-path",
-    help="Path to database for storing session logs",
     default="logs.db",
+    help="Path to SQLite database for storing session logs (default: './logs.db'). If no database exists at that path, one will be created.",
 )
-@trainer.command()
-def cli(database_path):
+@click.option(
+    "-u",
+    "--user-interface",
+    "arg_ui",
+    prompt=True,
+    type=click.Choice(["cli", "web"]),
+    help="Which user interface to use.",
+)
+def trainer(database_path, arg_ui):
+    """Entry point to GM Trainer."""
     session = GameSession(SCENARIO, sqlite_utils.Database(database_path))
-    ui = CommandLineUI(session)
+    if arg_ui == "web":
+        ui = WebUI(session)
+    else:
+        ui = CommandLineUI(session)
     ui.run()
-
-
-@trainer.command()
-def web():
-    session = GameSession(SCENARIO)
-    ui = WebUI(session)
-    ui.launch()
 
 
 if __name__ == "__main__":
