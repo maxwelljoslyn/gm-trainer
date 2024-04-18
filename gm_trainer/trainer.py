@@ -79,7 +79,8 @@ class CommandLineUI:
 
 
 class WebUI:
-    def __init__(self, session):
+    def __init__(self, session, port: int | None = None):
+        self.port = port
         self.session = session
         # To display all player responses in one window, we have to
         # use a single chatbot output component into which we can mix
@@ -95,8 +96,9 @@ class WebUI:
             analytics_enabled=False,
         )
 
-        self.interface.launch()
     def run(self):
+        """Run the web UI server on localhost. If self.port is None, fall back to Gradio's default of 7680."""
+        self.interface.launch(server_port=self.port)
 
     def accept_input(self, gm_input):
         self.session.narration = gm_input
@@ -214,11 +216,17 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     type=click.Choice(["cli", "web"]),
     help="Which user interface to use.",
 )
-def trainer(database_path, arg_ui):
+@click.option(
+    "--port",
+    type=int,
+    default=None,
+    help="Port at which to serve the web UI. If the command-line UI is used, this argument is ignored.",
+)
+def trainer(database_path, arg_ui, port):
     """Entry point to GM Trainer."""
     session = GameSession(SCENARIO, sqlite_utils.Database(database_path))
     if arg_ui == "web":
-        ui = WebUI(session)
+        ui = WebUI(session, port)
     else:
         ui = CommandLineUI(session)
     ui.run()
