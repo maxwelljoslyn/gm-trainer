@@ -1,4 +1,4 @@
-from .cli import cli
+from .trainer import trainer
 
 if __name__ == "__main__":
-    cli()
+    trainer()

@@ -13,6 +13,7 @@ llm-claude-3 = "^0.3"
 sqlite-utils = "^3.36"
 python-ulid = "^2.4.0.post0"
 prompt-toolkit = "^3.0.43"
+gradio = "^4.26.0"
 
 
 [tool.poetry.group.dev.dependencies]
