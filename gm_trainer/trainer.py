@@ -212,12 +212,32 @@ class GameSession:
         3. Declaratively state what you want your character to do. (mandatory)
 
         Always follow these further instructions:
-        No yapping or preambles.
-        No saying more than one logical thing at a time.
-        No assuming that you possess any skills, items, or knowledge without confirming by asking the GM.
-        No describing any game scenario elements that aren't about your character.
-        No describing other character's.
-        Never surround outputs with asterisks, *like this*."""
+        Do not yap, preface, or ramble.
+        Do your best to say only one sentence at a time.
+        Do not assume that your character possess any skills, items, or knowledge: always ask the GM.
+        Do not assume anything about the game scenario: always ask the GM. 
+        Do not surround outputs with asterisks, *like this*.
+
+            Examples:
+            <example>
+            <input>
+            GM: {p.pc.name}, the last orc collapses after you hit it with your sword.
+            </input>
+            <output>
+            I rush over to the corpse and search it.
+            </output>
+            </example>
+
+            <example>
+            <input>
+            GM: You hear the sounds of clashing weapons over the horizon, and then the dull whomp of a fireball. A few seconds later, a saddled but riderless horse comes running over the nearest hill.
+            Krandahar: I move toward the horse at a jog.
+            </input>
+            <output>
+            I follow after Krandahar, drawing my enchanted sword as I do so.
+            </output>
+            </example>
+            """
         ).strip()
 
 
