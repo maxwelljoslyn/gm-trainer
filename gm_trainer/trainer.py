@@ -1,17 +1,19 @@
+import logging
+import os
 import random
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
 from time import sleep
-import logging
-import os
+from typing import Optional
 
 import click
 import gradio as gr
 import llm
 import prompt_toolkit as pt
 import sqlite_utils
+from llm import Conversation, Response
 from ulid import ULID
 
 # NOTE Gradio sends telemetry and analytics by default.
@@ -28,6 +30,35 @@ MODEL = llm.get_model("claude-3.5-sonnet")
 MODEL.key = os.getenv("GM_TRAINER_OPUS_API_KEY")
 
 SCENARIO = """The year is 1651. You and your companions woke up dawn and traveled into the foothills of the mountains of Tenerife, the most important of the Canary Islands. Now you stand before a cave whose opening is as tall as two men and as wide as a wagon. You've been told that before these islands were conquered by the Spanish, the indigenous Guanches (who still exist) would bury their mummified dead in caverns like this."""
+
+num_conversations = 0
+
+
+def load_conversation(db, conversation_id: str):
+    """Based on function of the same name in the llm package's cli.py.
+    See https://github.com/simonw/llm/blob/96db13f53774154a10fde9f41e659937ebe2ea01/llm/cli.py#L449C23-L449C81"""
+    # load the most recent row regarding this conversation
+    try:
+        # it's not clear to me why the conversations table contains
+        # multiple rows for a given conversation, but it's something to do
+        # with the fact that the name column changes with each new prompt
+        # for a response that comes in the conversation.
+        row = list(
+            db["conversations"].rows_where(
+                "id = ?", [conversation_id], order_by="rowid desc", limit=1
+            )
+        )[0]
+    except (IndexError, sqlite_utils.db.NotFoundError):
+        raise ValueError("No conversation found with id={}".format(conversation_id))
+    # turn that response into a conversation
+    conversation = Conversation.from_row(row)
+    # load its previous responses
+    for response in db["responses"].rows_where(
+        "conversation_id = ?", [conversation_id]
+    ):
+        conversation.responses.append(Response.from_row(response))
+    return conversation
+
 
 class RandomIterator:
     def __init__(self, iterable):
@@ -62,22 +93,44 @@ class PlayerCharacter:
 class Player:
     name: str
     pc: PlayerCharacter
+    db: sqlite_utils.Database
+    conversation_id: Optional[str] = None
 
     def __post_init__(self):
         """Set up the LLM conversation."""
-        self.conversation = MODEL.conversation()
+        global num_conversations
+        num_conversations += 1
+        if self.conversation_id:
+            self.conversation = load_conversation(self.db, self.conversation_id)
+            print(
+                f"loaded old conversation for {self.name}; there are now {num_conversations} convos"
+            )
+        else:
+            self.conversation = MODEL.conversation()
+            print(
+                f"created new conversation for {self.name}; there are now {num_conversations} convos"
+            )
 
     def format_response(self, response):
         return f"{self.pc.name}: {response.text()}"
 
 
-arvak = PlayerCharacter("Arvak", "fighter", 2)
-bolzar = PlayerCharacter(
-    "Bolzar", "mage", 3, ["Witchbolt", "Protective Aura", "Levitate", "Sleep"]
-)
-alice = Player("Alice", arvak)
-bob = Player("Bob", bolzar)
-PLAYERS = [alice, bob]
+def default_players(db, conversations=None):
+    if not conversations:
+        conversations = {}
+    andrew = PlayerCharacter("Andrew", "assassin", 2)
+    alice = Player("Alice", andrew, db, conversation_id=conversations.get("Alice"))
+    benjamin = PlayerCharacter("Benjamin", "mage", 1, ["Sleep", "Unseen Servant"])
+    bob = Player("Bob", benjamin, db, conversation_id=conversations.get("Bob"))
+    carlos = PlayerCharacter(
+        "Carlos", "priest (Catholic)", 1, ["Cure Light Wounds", "Light"]
+    )
+    charles = Player(
+        "Charles", carlos, db, conversation_id=conversations.get("Charles")
+    )
+    darby = PlayerCharacter("Darby", "thief", 1)
+    dan = Player("Dan", darby, db, conversation_id=conversations.get("Dan"))
+    return [alice, bob, charles, dan]
 
 
 class CommandLineUI:
@@ -132,13 +185,23 @@ Seconds = int
 
 
 class GameSession:
-    def __init__(self, narration, db=None):
+    def __init__(self, narration, db=None, conversations=None):
         self.narration = narration
         self.db = db
         self.actions_this_round = []
         self.actions_previous_round = []
         self.id = str(ULID()).lower()
-        self.players = deepcopy(PLAYERS)
+        # TODO oh crap, reloading a session isn't just a matter of
+        # loading conversations for all of the players: we also need
+        # to set self.actions_previous_round somehow!
+        # and, perhaps, have self.make_player_prompt use something
+        # other than the default starting narration in order to tell
+        # the player that they are continuing play.
+        # Buuuut ...  let's just try it for now.
+        # LLMs are good at recovering from weird stuff.
+        if conversations:  # TODO need to also check if loading happened successfully...
+            self.narration = "We continue playing where we left off."
+        self.players = default_players(db, conversations)
 
     def run_turn(
         self,
@@ -269,9 +332,23 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     default=None,
     help="Port at which to serve the web UI. If the command-line UI is used, this argument is ignored.",
 )
-def trainer(database_path, arg_ui, port):
+@click.option(
+    "-c",
+    "--conversation",
+    type=(str, str),
+    default=None,
+    nargs=2,  # this many values expected per invocation of option
+    multiple=True,  # option can be passed multiple times
+    help=dedent(
+        """
+    Pair of player name and conversation ID. Can be used to resume a set of sessions.
+    Example: --conversation Alice cdzj33l2j0djfl3j"""
+    ),
+)
+def trainer(database_path, arg_ui, port, conversation):
     """Entry point to GM Trainer."""
-    session = GameSession(SCENARIO, sqlite_utils.Database(database_path))
+    conversations = dict(conversation) if conversation else {}
+    session = GameSession(SCENARIO, sqlite_utils.Database(database_path), conversations)
     if arg_ui == "web":
         ui = WebUI(session, port)
     else:
