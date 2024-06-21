@@ -16,6 +16,8 @@ import sqlite_utils
 from llm import Conversation, Response
 from ulid import ULID
 
+from gm_trainer.shared import PROJECT_ROOT
+
 # NOTE Gradio sends telemetry and analytics by default.
 # Supposedly I've turned it off with the `analytics_enabled=False` argument to gr.Interface, but be wary.
 # It hit these URLs, among others:
@@ -314,7 +316,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.option(
     "-d",
     "--database-path",
-    default="logs.db",
+    default=PROJECT_ROOT / "logs.db",
     help="Path to SQLite database for storing session logs (default: './logs.db'). If no database exists at that path, one will be created.",
 )
 @click.option(
