@@ -191,12 +191,14 @@ class GameSession:
             ]
         )
 
+    def players_except(self, p: Player):
+        return [each for each in self.players if each is not p]
+
     def describe_other_players(self, p: Player):
         return "\n".join(
             [
                 f"{other.name}, playing {other.pc.display_details()}"
-                for other in self.players
-                if p.name != other.name
+                for other in self.players_except(p)
             ]
         )
 
