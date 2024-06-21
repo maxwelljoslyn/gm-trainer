@@ -1,3 +1,4 @@
+import random
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,6 +28,19 @@ MODEL = llm.get_model("claude-3.5-sonnet")
 MODEL.key = os.getenv("GM_TRAINER_OPUS_API_KEY")
 
 SCENARIO = """The year is 1651. You and your companions woke up dawn and traveled into the foothills of the mountains of Tenerife, the most important of the Canary Islands. Now you stand before a cave whose opening is as tall as two men and as wide as a wagon. You've been told that before these islands were conquered by the Spanish, the indigenous Guanches (who still exist) would bury their mummified dead in caverns like this."""
+
+class RandomIterator:
+    def __init__(self, iterable):
+        self.items = list(iterable)
+        random.shuffle(self.items)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self.items:
+            raise StopIteration
+        return self.items.pop()
 
 
 @dataclass
@@ -126,10 +140,18 @@ class GameSession:
         self.id = str(ULID()).lower()
         self.players = deepcopy(PLAYERS)
 
-    def run_turn(self, *, tries=3, backoff_duration: Seconds = 2, display_fn=None):
+    def run_turn(
+        self,
+        *,
+        tries=3,
+        backoff_duration: Seconds = 2,
+        display_fn=None,
+        random_turn_order=True,
+    ):
         self.actions_previous_round = deepcopy(self.actions_this_round)
         self.actions_this_round = []
-        for player in self.players:
+        order = RandomIterator(self.players) if random_turn_order else self.players
+        for player in order:
             prompt = self.make_player_prompt(player)
             while True and tries > 0:
                 try:
