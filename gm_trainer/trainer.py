@@ -73,9 +73,7 @@ class CommandLineUI:
     def run(self):
         print(f"GM: {self.session.narration}")
         while True:
-            self.session.run_turn()
-            for each in self.session.actions_this_round:
-                print(each)
+            self.session.run_turn(display_fn=print)
             self.session.narration = pt.prompt("GM: ")
 
 
@@ -128,7 +126,7 @@ class GameSession:
         self.id = str(ULID()).lower()
         self.players = deepcopy(PLAYERS)
 
-    def run_turn(self, tries=3, backoff_duration: Seconds = 2):
+    def run_turn(self, *, tries=3, backoff_duration: Seconds = 2, display_fn=None):
         self.actions_previous_round = deepcopy(self.actions_this_round)
         self.actions_this_round = []
         for player in self.players:
@@ -154,7 +152,10 @@ class GameSession:
                     backoff_duration *= 2
             if self.db:
                 response.log_to_db(self.db)
-            self.actions_this_round.append(player.format_response(response))
+            resp = player.format_response(response)
+            if display_fn:
+                display_fn(resp)
+            self.actions_this_round.append(resp)
 
     def make_player_prompt(self, p: Player):
         # In the case that this is the first round and no player has
