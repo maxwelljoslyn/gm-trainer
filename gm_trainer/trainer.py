@@ -256,6 +256,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 )
 @click.option(
     "-u",
+    "--ui",
     "--user-interface",
     "arg_ui",
     prompt=True,
