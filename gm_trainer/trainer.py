@@ -29,7 +29,7 @@ logger = logging.getLogger(Path(__file__).name)
 logging.basicConfig(level=None)
 
 MODEL = llm.get_model("claude-3.5-sonnet")
-MODEL.key = os.getenv("GM_TRAINER_OPUS_API_KEY")
+MODEL.key = os.getenv("GM_TRAINER_API_KEY")
 
 SCENARIO = """The year is 1651. You and your companions woke up dawn and traveled into the foothills of the mountains of Tenerife, the most important of the Canary Islands. Now you stand before a cave whose opening is as tall as two men and as wide as a wagon. You've been told that before these islands were conquered by the Spanish, the indigenous Guanches (who still exist) would bury their mummified dead in caverns like this."""
 
