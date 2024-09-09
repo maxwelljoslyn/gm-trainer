@@ -26,7 +26,7 @@ from gm_trainer.shared import PROJECT_ROOT
 # INFO:httpx:HTTP Request: POST https://api.gradio.app/gradio-launched-telemetry/ "HTTP/1.1 200 OK"
 
 logger = logging.getLogger(Path(__file__).name)
-logging.basicConfig(level=None)
+
 
 MODEL = llm.get_model("claude-3.5-sonnet")
 MODEL.key = os.getenv("GM_TRAINER_API_KEY")
@@ -104,12 +104,12 @@ class Player:
         num_conversations += 1
         if self.conversation_id:
             self.conversation = load_conversation(self.db, self.conversation_id)
-            print(
+            logger.debug(
                 f"loaded old conversation for {self.name}; there are now {num_conversations} convos"
             )
         else:
             self.conversation = MODEL.conversation()
-            print(
+            logger.debug(
                 f"created new conversation for {self.name}; there are now {num_conversations} convos"
             )
 
@@ -354,8 +354,20 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     default=SCENARIO,
     help="""The initial scenario description to be "read" to the players.""",
 )
-def trainer(database_path, arg_ui, port, conversation, scenario):
+@click.option(
+    "-v", "--verbose", is_flag=True, help="Enable verbose output.", default=False
+)
+def trainer(database_path, arg_ui, port, conversation, scenario, verbose):
     """Entry point to GM Trainer."""
+    # set up logging
+    console_handler = logging.StreamHandler()
+    # console_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    logger.setLevel(logging.DEBUG if verbose else logging.INFO)
     conversations = dict(conversation) if conversation else {}
     session = GameSession(scenario, sqlite_utils.Database(database_path), conversations)
     if arg_ui == "web":
