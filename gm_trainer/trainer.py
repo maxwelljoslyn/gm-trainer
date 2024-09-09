@@ -347,10 +347,17 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     Example: --conversation Alice cdzj33l2j0djfl3j"""
     ),
 )
-def trainer(database_path, arg_ui, port, conversation):
+@click.option(
+    "-s",
+    "--scenario",
+    type=str,
+    default=SCENARIO,
+    help="""The initial scenario description to be "read" to the players.""",
+)
+def trainer(database_path, arg_ui, port, conversation, scenario):
     """Entry point to GM Trainer."""
     conversations = dict(conversation) if conversation else {}
-    session = GameSession(SCENARIO, sqlite_utils.Database(database_path), conversations)
+    session = GameSession(scenario, sqlite_utils.Database(database_path), conversations)
     if arg_ui == "web":
         ui = WebUI(session, port)
     else:
