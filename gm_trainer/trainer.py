@@ -76,12 +76,20 @@ class RandomIterator:
         return self.items.pop()
 
 
+mandatary_religion_classes = ("cleric", "paladin")
+
+
 @dataclass
 class PlayerCharacter:
     name: str
     character_class: str
     level: int = 1
     spells: list[str] | None = None
+    religion: Optional[str] = None
+
+    def __post_init__(self):
+        if self.character_class in mandatary_religion_classes and not self.religion:
+            raise ValueError(f"A {self.character_class} needs a religion.")
 
     def display_details(self):
         result = [f"{self.name}", f"Level {self.level} {self.character_class}"]
@@ -125,7 +133,11 @@ def default_players(db, conversations=None):
     benjamin = PlayerCharacter("Benjamin", "mage", 1, ["Sleep", "Unseen Servant"])
     bob = Player("Bob", benjamin, db, conversation_id=conversations.get("Bob"))
     carlos = PlayerCharacter(
-        "Carlos", "priest (Catholic)", 1, ["Cure Light Wounds", "Light"]
+        "Carlos",
+        "cleric",
+        1,
+        ["Cure Light Wounds", "Light"],
+        "Catholic",
     )
     charles = Player(
         "Charles", carlos, db, conversation_id=conversations.get("Charles")
