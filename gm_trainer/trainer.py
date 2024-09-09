@@ -3,6 +3,7 @@ import os
 import random
 from copy import deepcopy
 from dataclasses import dataclass
+from itertools import cycle
 from pathlib import Path
 from textwrap import dedent
 from time import sleep
@@ -14,7 +15,27 @@ import llm
 import prompt_toolkit as pt
 import sqlite_utils
 from llm import Conversation, Response
+from rich import print  # NOTE patching builtin print
+from rich.console import Console
 from ulid import ULID
+
+console = Console()
+
+STYLES = [
+    "dodger_blue2",
+    "dark_magenta",
+    "orange3",
+    "orchid",
+    "dark_goldenrod",
+]
+
+
+style_cycle = cycle(STYLES)
+
+
+def style():
+    return next(style_cycle)
+
 
 from gm_trainer.shared import PROJECT_ROOT
 
@@ -105,9 +126,11 @@ class Player:
     pc: PlayerCharacter
     db: sqlite_utils.Database
     conversation_id: Optional[str] = None
+    style: Optional[str] = None
 
     def __post_init__(self):
         """Set up the LLM conversation."""
+        self.style = style()
         global num_conversations
         num_conversations += 1
         if self.conversation_id:
@@ -122,7 +145,17 @@ class Player:
             )
 
     def format_response(self, response):
-        return f"{self.pc.name}: {response.text()}"
+        styled_name = (
+            f"[{self.style}]{self.pc.name}[/{self.style}]"
+            if self.style
+            else self.pc.name
+        )
+        if self.pc.character_class in mandatary_religion_classes:
+            religion_tag = f" ({self.pc.religion})"
+        else:
+            religion_tag = ""
+        klass = f"[L{self.pc.level} {self.pc.character_class}{religion_tag}]"
+        return f"{styled_name} {klass}: {response.text()}"
 
 
 def default_players(db, conversations=None):
