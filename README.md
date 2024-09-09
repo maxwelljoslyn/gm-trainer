@@ -14,11 +14,12 @@ Being dissatisfied with what I saw in that space, I thought perhaps AI could sim
 
 ## How It Works
 
-Assuming two LLM players, here's a summary of operation:
+Assuming three LLM players, here's a summary of operation:
 
 1. The GM gives an initial scenario description.
 1. The scenario is sent to LLM player 1, who responds.
-1. The scenario *and player 1's response* are sent to player 2, allowing player 1 to react not only to the scenario, but also to what player 1 did.
+1. The scenario **and player 1's response** are sent to player 2, allowing him to react to not only the scenario, but also what player 1 did.
+1. The scenario, **player 1's response, and player 2's response** are sent to player 3, allowing him to react to the scenario and both previous player inputs.
 1. The GM explains how the players' actions changed the scenario. This explanation, along with both players' previous actions, forms the updated scenario.
 1. The whole process repeats from step 2.
 
@@ -26,13 +27,13 @@ Example prompts coming soon.
 
 ## Screenshots
 
+### Command Line UI
+
+![cli-screenshot](https://github.com/user-attachments/assets/39d63d2d-20ad-4156-8aaf-4c088bc97be2)
+
 ### Web UI
 
 <img width="1372" alt="screenshot" src="https://github.com/maxwelljoslyn/gm-trainer/assets/11641081/0c5030af-c97a-47d2-bc20-c794d1d1f88f">
-
-### Command Line UI
-
-<img width="937" alt="cli-ui-screenshot" src="https://github.com/maxwelljoslyn/gm-trainer/assets/11641081/52a95a50-e66a-425f-967a-e82ff37bb08f">
 
 ## Installation and Setup
 
